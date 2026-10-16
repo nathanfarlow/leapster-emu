@@ -1,4 +1,4 @@
-# leapster
+# leapster-emu
 
 A small, accurate Leapster emulator.
 
