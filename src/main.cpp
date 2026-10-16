@@ -1,5 +1,6 @@
 #include <SDL2/SDL.h>
 
+#include <algorithm>
 #include <fstream>
 #include <map>
 #include <print>
@@ -12,6 +13,10 @@ using namespace leapster;
 namespace {
 
 constexpr const char *usage = "usage: leapster BIOS CART [--eeprom FILE] [--save FILE] [--scale N]";
+
+constexpr u8 calibration[]{0x00, 0x01, 0x00, 0x00, 0x40, 0x06, 0x40, 0x06, 0x52, 0x2B, 0x06, 0x00, 0xF8, 0xB0,
+                           0xF2, 0xFF, 0xB8, 0xD9, 0xFF, 0xFF, 0xB8, 0x5D, 0x4D, 0x2E, 0x68, 0x10, 0x00, 0x00,
+                           0x38, 0xDD, 0x0D, 0x00, 0x58, 0xAD, 0x26, 0xF7, 0x05, 0x00, 0x00, 0x00, 0x76};
 
 std::vector<u8> read(const std::string &path) {
     std::ifstream in{path, std::ios::binary};
@@ -71,6 +76,9 @@ int run(int argc, char **argv) {
     const std::string &eeprom = option["eeprom"], &save = option["save"];
     Leapster console{read(argv[1]), read(argv[2])};
     Board &board = console.board;
+    board.eeprom[1].assign(256, 0xFF);
+    std::ranges::copy(calibration, board.eeprom[1].begin());
+    std::ranges::copy(calibration, board.eeprom[1].begin() + 0x30);
     if (!eeprom.empty() && std::ifstream{eeprom}) board.eeprom[1] = read(eeprom);
     if (!save.empty() && std::ifstream{save}) board.eeprom[0] = read(save);
     board.audio.recording = true;
