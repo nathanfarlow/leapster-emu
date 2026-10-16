@@ -1,0 +1,16 @@
+BasedOnStyle: LLVM
+ColumnLimit: 120
+IndentWidth: 4
+AccessModifierOffset: -2
+AllowShortBlocksOnASingleLine: Always
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortEnumsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: All
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse
+AllowShortLambdasOnASingleLine: All
+AllowShortLoopsOnASingleLine: true
+AlwaysBreakTemplateDeclarations: Yes
+PackConstructorInitializers: BinPack
+SpacesBeforeTrailingComments: 2
+AllowShortRecordOnASingleLine: Always
+SeparateDefinitionBlocks: Always
