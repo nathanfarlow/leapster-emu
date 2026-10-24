@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <array>
 #include <deque>
 #include <map>
@@ -59,13 +60,18 @@ struct Board {
             const std::optional<u32> word = live(at & ~3u);
             return word ? *word >> 8 * (at & 3) & ones(bytes) : registers.read(at, bytes);
         }
+        if (at >> 12 == 0x0303F) return at >> 2 == 0x0303FFFC >> 2 ? 0 : little(ram(at & -bytes), bytes);
+        if (at >> 29 == 6) return flash_read(at & -bytes, bytes);
         return at >= 0xC0000000 || (at >= 0x0C000000 && at < 0x28000000) ? ones(bytes) : 0;
     }
 
     void store(u32 at, u32 bytes, u32 value) {
         if (mmio(at)) return write(at, bytes, value);
-        if (at >> 26 == 0x0F || at >> 18 == 0xC0)
-            for (u8 *p = memory(at & -bytes); bytes--; value >>= 8) *p++ = u8(value);
+        if (at >> 29 == 6) {
+            if (!flash_wide())
+                for (; bytes--; value >>= 8) program(at++, u8(value));
+        } else if (u8 *p = ram(at & -bytes))
+            for (; bytes--; value >>= 8) *p++ = u8(value);
     }
 
     u32 requests{};
@@ -84,16 +90,63 @@ struct Board {
 
     std::vector<s16> &samples() { return pending |= audio.mix_until_now(now), audio.sound; }
 
-  private:
     u8 *memory(u32 at) {
         if (at >> 30 == 1 || at < 0x80000) return bios.empty() ? nullptr : &bios[at & 0x1FFFFF];
         if (at >> 30 == 2) return cart.empty() ? nullptr : &cart[at & 0x7FFFFF];
+        if (at >> 29 == 6) return flash_id || flash_wide() || now < flash_ready ? nullptr : &flash[at & 0x7FFFF];
+        return at >> 12 == 0x0303F ? nullptr : ram(at);
+    }
+
+    std::vector<u8> flash = std::vector<u8>(0x80000, 0xFF);
+
+  private:
+    u8 *ram(u32 at) {
         if (at >> 26 == 0x0F) return &dram[at & 0x1FFFFF];
         if (at >> 18 == 0xC0) return &sram[at & 0xFFFF];
         return nullptr;
     }
 
     static bool mmio(u32 at) { return at >> 20 == 0x018; }
+
+    // SST39VF040.
+    static constexpr u64 program_clocks = 960, erase_clocks = 1'585'000;
+    u32 flash_step{}, flash_status{};
+    bool flash_id{}, flash_toggle{};
+    u64 flash_ready{};
+
+    bool flash_wide() const { return registers.word(csn_ctrl, 2) & 2; }
+
+    u32 flash_read(u32 at, u32 bytes) {
+        if (now < flash_ready)
+            return (flash_status | u32{flash_toggle = !flash_toggle} << 6) * 0x01010101 & ones(bytes);
+        u32 word = 0;
+        for (u32 n = 0; n < bytes; ++n) {
+            const u32 a = at + n;
+            const u32 byte = flash_id                ? (a & 0xFFF) < 4 ? 0xFF01D7BF >> 8 * (a & 3) & 0xFF : 0xFF
+                             : flash_wide() && a & 1 ? 0
+                                                     : flash[a & 0x7FFFF];
+            word |= byte << 8 * n;
+        }
+        return word;
+    }
+
+    void program(u32 at, u8 byte) {
+        const u32 a = at & 0x7FFF, step = flash_step;
+        if (now < flash_ready) return;
+        flash_step = 0, flash_toggle = false;
+        if (step == 6) flash[at & 0x7FFFF] &= byte, flash_ready = now + program_clocks;
+        else if (byte == 0xF0) flash_id = false;
+        else if (a == 0x5555 && byte == 0xAA && step % 3 == 0) flash_step = step + 1;
+        else if (a == 0x2AAA && byte == 0x55 && step % 3 == 1) flash_step = step + 1;
+        else if (step == 2 && a == 0x5555 && byte == 0xA0) flash_step = 6;
+        else if (step == 2 && a == 0x5555 && byte == 0x80) flash_step = 3;
+        else if (step == 2 && a == 0x5555 && byte == 0x90) flash_id = true;
+        else if (step == 5 && byte == 0x30)
+            std::fill_n(&flash[at & 0x7F000], 0x1000, 0xFF), flash_ready = now + erase_clocks;
+        else if (step == 5 && a == 0x5555 && byte == 0x10)
+            std::ranges::fill(flash, 0xFF), flash_ready = now + erase_clocks;
+        if (flash_ready > now) flash_status = step == 6 ? ~byte & 0x80 : 0;
+    }
 
     u32 pending{};
 

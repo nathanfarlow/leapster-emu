@@ -7,7 +7,7 @@ A small, accurate Leapster emulator.
 ```
 make # Needs SDL2
 
-build/leapster BIOS CART [--eeprom FILE] [--save FILE] [--scale N]
+build/leapster BIOS CART [--eeprom FILE] [--save FILE] [--flash FILE] [--scale N]
 ```
 
 Keys: arrows, Z = A, X = B, H = hint, Enter = home, P = pause.

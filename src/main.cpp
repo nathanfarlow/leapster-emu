@@ -12,7 +12,7 @@ using namespace leapster;
 
 namespace {
 
-constexpr const char *usage = "usage: leapster BIOS CART [--eeprom FILE] [--save FILE] [--scale N]";
+constexpr const char *usage = "usage: leapster BIOS CART [--eeprom FILE] [--save FILE] [--flash FILE] [--scale N]";
 
 constexpr u8 calibration[]{0x00, 0x01, 0x00, 0x00, 0x40, 0x06, 0x40, 0x06, 0x52, 0x2B, 0x06, 0x00, 0xF8, 0xB0,
                            0xF2, 0xFF, 0xB8, 0xD9, 0xFF, 0xFF, 0xB8, 0x5D, 0x4D, 0x2E, 0x68, 0x10, 0x00, 0x00,
@@ -68,12 +68,12 @@ int run(int argc, char **argv) {
     std::map<std::string, std::string> option;
     for (int i = 3; i < argc; i += 2) {
         const std::string name = argv[i];
-        if (i + 1 >= argc || (name != "--eeprom" && name != "--save" && name != "--scale"))
+        if (i + 1 >= argc || (name != "--eeprom" && name != "--save" && name != "--flash" && name != "--scale"))
             return std::println(stderr, "{}", usage), 2;
         option[name.substr(2)] = argv[i + 1];
     }
     const int scale = option.contains("scale") ? std::stoi(option["scale"]) : 4;
-    const std::string &eeprom = option["eeprom"], &save = option["save"];
+    const std::string &eeprom = option["eeprom"], &save = option["save"], &flash = option["flash"];
     Leapster console{read(argv[1]), read(argv[2])};
     Board &board = console.board;
     board.eeprom[1].assign(256, 0xFF);
@@ -81,6 +81,7 @@ int run(int argc, char **argv) {
     std::ranges::copy(calibration, board.eeprom[1].begin() + 0x30);
     if (!eeprom.empty() && std::ifstream{eeprom}) board.eeprom[1] = read(eeprom);
     if (!save.empty() && std::ifstream{save}) board.eeprom[0] = read(save);
+    if (!flash.empty() && std::ifstream{flash}) board.flash = read(flash), board.flash.resize(0x80000, 0xFF);
     board.audio.recording = true;
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0) throw std::runtime_error{SDL_GetError()};
@@ -137,6 +138,7 @@ int run(int argc, char **argv) {
     }
     if (!eeprom.empty()) write(eeprom, board.eeprom[1]);
     if (!save.empty() && !board.eeprom[0].empty()) write(save, board.eeprom[0]);
+    if (!flash.empty()) write(flash, board.flash);
     SDL_Quit();
     return 0;
 }
