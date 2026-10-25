@@ -55,6 +55,9 @@ constexpr Reg blit_command = word(0x01808800, 0), blit_source = word(0x01808804)
 constexpr Reg chip_id = word(0x01809000, 0, 2), straps = word(0x01809004, 0), clock_speed = word(0x01809008, 7),
               fetch_address = word(0x01809038, 0), sdram_config = word(0x01809080, all, 0x1102);
 constexpr Reg sdram_ctrl = run(0x0180A000, 0x0180A00C, ~0x3Cu);
+constexpr Reg analog_switch = run(0x0180C000, 0x0180C010, all, 0xFF),
+              analog_enable = run(0x0180C014, 0x0180C01C, all, 1),
+              analog_level = run(0x0180C020, 0x0180C024, all, 0xFF);
 constexpr Reg rtc_control = word(0x0180B000, ~0x100u), rtc_status = word(0x0180B004, 0, 0x20008000),
               rtc_count = word(0x0180B020, 0),
               rtc_alarm{0x0180B024, 0x0180B024, all, 0x3FFFFFFF, true, false, Write::stored, true, 0x3FFFFFFF};
@@ -106,7 +109,8 @@ constexpr const Reg *map[]{
     &pic_enable, &adc_config, &adc_fifo, &adc_control, &adc_status, &csn_ctrl, &csn_strap, &audio_command, &voices_playing,
     &audio_control, &audio_enable, &buffer_feed, &voice_file, &frc_id, &frc_config, &frc_power, &lcd_status, &frame_buffer,
     &pixel_format, &raster, &ramp, &ramp_alias, &blit_command, &blit_source, &blit_longs, &blit_lines, &blit_destination,
-    &blit_status, &chip_id, &straps, &clock_speed, &fetch_address, &sdram_config, &sdram_ctrl, &rtc_control, &rtc_status,
+    &blit_status, &chip_id, &straps, &clock_speed, &fetch_address, &sdram_config, &sdram_ctrl, &analog_switch,
+    &analog_enable, &analog_level, &rtc_control, &rtc_status,
     &rtc_count, &rtc_alarm, &timer_count[0], &timer_count[1], &timer_count[2], &timer_control[0], &timer_control[1],
     &timer_control[2], &timer_limit[0], &timer_limit[1], &timer_limit[2], &serial_control[0], &serial_control[1],
 };

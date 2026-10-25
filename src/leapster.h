@@ -150,7 +150,11 @@ struct Board {
 
     u32 pending{};
 
-    u32 lines() const { return pending | u32{!adc.empty()} << 8; }
+    u32 levels() const {
+        return u32{(registers[lcd_status] & 0xF0000) != 0} << 12 | u32{(blit_flags & 0x0E) != 0} << 14;
+    }
+
+    u32 lines() const { return pending | u32{!adc.empty()} << 8 | levels(); }
 
     void request() {
         constexpr std::pair<u32, u32> wired[]{{8, 16}, {14, 18}, {16, 21}, {18, 29}};
@@ -188,8 +192,12 @@ struct Board {
     u64 eeprom_ready{};
     u32 eeprom_byte{};
 
-    u64 epoch{}, blit_start{}, blit_done{};
+    u64 epoch{}, blit_start{}, blit_done{}, lcd_cleared{};
     u32 blit_flags{}, lcd_flags{5};
+
+    u32 lcd_bits() const {
+        return (now - epoch) / frame_clocks != (lcd_cleared - epoch) / frame_clocks ? 5 : lcd_flags;
+    }
 
     u32 scan() const {
         const u64 in_frame = (now - epoch) % frame_clocks;
@@ -255,7 +263,7 @@ struct Board {
             }();
         case adc_status.first: return registers[adc_status] | (adc.empty() ? 0x100 : 0);
         case spi_data.first: return eeprom_byte;
-        case lcd_status.first: return registers[lcd_status] | lcd_flags;
+        case lcd_status.first: return registers[lcd_status] | lcd_bits();
         case voices_playing.first: return audio.playing;
         case raster.first: return scan();
         case rtc_count.first: return seconds();
@@ -267,10 +275,12 @@ struct Board {
     }
 
     void write(u32 at, u32 bytes, u32 value) {
-        if (fold(at) == audio_enable.first && value & 0x8000 && !(registers[audio_enable] & 0x8000))
-            pending |= 1u << 18;
+        if (at - 0x0180C000 < 0x14 && value >> 12 != (0xCAFE0 | (at >> 2 & 7))) return;
+        const bool lines_high = registers[blit_lines] > 160;
         registers.write(at, bytes, value);
         const u32 word = at & ~3u, lanes = value << 8 * (at & 3);
+        if (word == blit_lines.first && lines_high && registers[blit_lines] <= 160)
+            blit_flags |= 8, pending |= 1u << 14;
         for (u32 n = 0; n < 3; ++n) {
             if (word == timer_count[n].first) seed[n] = value, started[n] = now + 25, written[n] = true;
             if (word == timer_control[n].first) raised[n] = false;
@@ -286,9 +296,12 @@ struct Board {
             eeprom_ready = std::max(now, writing[port]) + 408 * 96;
             if (value == 2) writing[port] = eeprom_ready + 5000 * 96;
         }
-        if (word == pic_pending.first) pending &= ~lanes;
+        if (word == pic_pending.first) pending = (pending & ~lanes) | levels();
         if (word == blit_status.first) blit_flags &= ~(lanes & 0x0E);
-        if (word == lcd_status.first) lcd_flags &= ~(lanes & 5), pending |= 1u << 12;
+        if (word == lcd_status.first) {
+            lcd_flags = lcd_bits() & ~(lanes & 5), lcd_cleared = now;
+            if (lanes & 0xF0000) pending |= 1u << 12;
+        }
         if (word == rtc_count.first) clock = value, clock_set = now;
         if (word == frc_power.first && value >> 31 && !(registers[pixel_format] >> 31)) epoch = now;
         if (word == blit_command.first && (value & 0xFF) == 0x1B) {
