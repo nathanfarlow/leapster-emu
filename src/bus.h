@@ -10,9 +10,9 @@ namespace leapster {
 enum Region { dram, sram, csn, unmapped, timeout, csn_regs, sdram_regs, peripheral_regs, audio_regs, power_regs };
 
 constexpr Region region(u32 at) {
-    constexpr Region page[16]{peripheral_regs, csn_regs,        audio_regs, peripheral_regs, audio_regs, unmapped,
-                              unmapped,        unmapped,        audio_regs, unmapped,        sdram_regs, power_regs,
-                              peripheral_regs, peripheral_regs, unmapped,   unmapped};
+    constexpr Region page[]{peripheral_regs, csn_regs,        audio_regs, peripheral_regs, audio_regs, unmapped,
+                            unmapped,        unmapped,        audio_regs, unmapped,        sdram_regs, power_regs,
+                            peripheral_regs, peripheral_regs, unmapped,   unmapped};
     if (at >> 26 == 0x0F) return dram;
     if (at >> 18 == 0xC0) return sram;
     if (at >> 30 || at < 0x80000 || (at >= 0x0C000000 && at < 0x28000000)) return csn;
@@ -68,7 +68,7 @@ struct Timing {
 
     u32 shift() const { return divider ? std::min(*divider, 5u) : 0; }
 
-    u32 chip(u32 n) const { return chip_select[n] ? *chip_select[n] : n == 6 ? 4 : 0x56; }
+    u32 chip(u32 n) const { return chip_select[n] ? *chip_select[n] : 0x56; }
 
     u32 field() const { return sdram_config ? *sdram_config & 15 : 2; }
 
@@ -136,7 +136,7 @@ struct Timing {
             code.fill(at), asked = newest = at & ~15u;
             done = filled_code = next_read = port(at) = std::max({now, port(at), next_read}) + cycles(fill_jump, at, 8);
         }
-        if ((at & 15) >= 8 && !code.has(at + 16)) {
+        if (at & 8 && !code.has(at + 16)) {
             code.fill(at + 16), asked = prefetching = (at + 16) & ~15u;
             prefetched = next_read = port(at) = std::max({done, port(at), next_read}) + cycles(fill_next, at, 8);
         }

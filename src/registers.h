@@ -30,8 +30,7 @@ constexpr Reg run(u32 first, u32 last, u32 decoded = all, u32 mask = all, u32 re
 
 constexpr Reg system_bytes{0x01800000, 0x0180000C, all, 0x000000FF, true};
 constexpr Reg delay_port = run(0x01800010, 0x0180001C, all, 0);
-constexpr Reg spi_command = word(0x01800030), spi_strobe = word(0x01800034, 0),
-              spi_data = run(0x01800038, 0x0180003C, all, 0);
+constexpr Reg spi_command = word(0x01800030), spi_strobe = word(0x01800034, 0), spi_data = word(0x01800038, 0);
 constexpr Reg gio_out = word(0x01800040), gio_direction = word(0x01800048), gio_input = word(0x0180004C, 0);
 constexpr Reg pic_pending{0x01800080, 0x01800080, all, 0x00000200, false, false, Write::clears},
     pic_enable = word(0x01800084);
@@ -44,8 +43,7 @@ constexpr Reg audio_control{0x018020E0, 0x018020E0, ~0x200u, all, true, true};
 constexpr Reg audio_enable{0x018020F4, 0x018020F4, ~0x200u, 0xFDFF, true, true};
 constexpr Reg buffer_feed{0x01803000, 0x0180301C, ~0x38u, all, false, false, Write::stored, false};
 constexpr Reg voice_file{0x01804000, 0x018043FF, ~0x300u, all, true, true};
-constexpr Reg frc_id = word(0x01808000, 0, 0x19850103), frc_config = run(0x01808004, 0x0180802C, all, 0),
-              frc_power = word(0x01808020, 0);
+constexpr Reg frc_id = word(0x01808000, 0, 0x19850103), frc_power = word(0x01808020, 0);
 constexpr Reg lcd_status = word(0x01808080, 0x000F0000), frame_buffer = run(0x01808088, 0x0180808C, all, 0x0007FFFF),
               pixel_format = word(0x01808090, 0x8000071F), raster = word(0x01808098, 0);
 constexpr Reg ramp = run(0x01808180, 0x018081BC), ramp_alias = run(0x018081C0, 0x018081FC, all, 0);
@@ -75,11 +73,9 @@ constexpr Reg other[]{
     run(0x01800050, 0x01800054),
     word(0x01800060),
     word(0x01800088),
-    run(0x01801030, 0x0180103C, ~0x30u, 0),
     {0x018020E4, 0x018020E4, ~0x200u, 0x0001, true, true},
     {0x018020E8, 0x018020E8, ~0x200u, 0x001F, true, true},
     {0x018020EC, 0x018020F0, ~0x200u, 0x00BF, true, true},
-    word(0x018020F8, 0),
     word(0x01808030, 0x01FF01FF),
     word(0x01808034, 0xE1FF01FF),
     word(0x01808038, 0x01FF01FF),
@@ -94,12 +90,10 @@ constexpr Reg other[]{
     run(0x0180D500, 0x0180D500, ~0x38u, 0, 1),
     run(0x0180D504, 0x0180D504, ~0x38u, 0, 0xFE),
     run(0x0180D508, 0x0180D508, ~0x38u, 0, 2),
-    run(0x0180D50C, 0x0180D510, ~0x38u, 0),
     run(0x0180D518, 0x0180D51C, ~0x38u, 0xFF),
     run(0x0180D600, 0x0180D600, ~0x38u, 0, 1),
     run(0x0180D604, 0x0180D604, ~0x38u, 0, 0xFE),
     run(0x0180D608, 0x0180D608, ~0x38u, 0, 2),
-    run(0x0180D60C, 0x0180D610, ~0x38u, 0),
     run(0x0180D618, 0x0180D61C, ~0x38u, 0xFF),
     run(0x0180D700, 0x0180D700, ~0x3Fu),
 };
@@ -107,7 +101,7 @@ constexpr Reg other[]{
 constexpr const Reg *map[]{
     &system_bytes, &delay_port, &spi_command, &spi_strobe, &spi_data, &gio_out, &gio_direction, &gio_input, &pic_pending,
     &pic_enable, &adc_config, &adc_fifo, &adc_control, &adc_status, &csn_ctrl, &csn_strap, &audio_command, &voices_playing,
-    &audio_control, &audio_enable, &buffer_feed, &voice_file, &frc_id, &frc_config, &frc_power, &lcd_status, &frame_buffer,
+    &audio_control, &audio_enable, &buffer_feed, &voice_file, &frc_id, &frc_power, &lcd_status, &frame_buffer,
     &pixel_format, &raster, &ramp, &ramp_alias, &blit_command, &blit_source, &blit_longs, &blit_lines, &blit_destination,
     &blit_status, &chip_id, &straps, &clock_speed, &fetch_address, &sdram_config, &sdram_ctrl, &analog_switch,
     &analog_enable, &analog_level, &rtc_control, &rtc_status,

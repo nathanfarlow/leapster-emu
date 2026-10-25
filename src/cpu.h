@@ -244,7 +244,6 @@ struct Cpu : State {
 
     void advance() {
         ++slots;
-        if (unsettled.empty()) return;
         for (Late &w : unsettled)
             if (!w.landed && (w.due < slots || status32 & H)) w.was = std::exchange(*w.to, w.value), w.landed = true;
         std::erase_if(unsettled, [&](const Late &w) { return w.landed && !(w.loaded && slots <= w.due + 2); });

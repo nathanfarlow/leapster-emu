@@ -145,14 +145,12 @@ struct Board {
             std::fill_n(&flash[at & 0x7F000], 0x1000, 0xFF), flash_ready = now + erase_clocks;
         else if (step == 5 && a == 0x5555 && byte == 0x10)
             std::ranges::fill(flash, 0xFF), flash_ready = now + erase_clocks;
-        if (flash_ready > now) flash_status = step == 6 ? ~byte & 0x80 : 0;
+        flash_status = step == 6 ? ~byte & 0x80 : 0;
     }
 
     u32 pending{};
 
-    u32 levels() const {
-        return u32{(registers[lcd_status] & 0xF0000) != 0} << 12 | u32{(blit_flags & 0x0E) != 0} << 14;
-    }
+    u32 levels() const { return u32{registers[lcd_status] != 0} << 12 | u32{blit_flags != 0} << 14; }
 
     u32 lines() const { return pending | u32{!adc.empty()} << 8 | levels(); }
 
@@ -248,7 +246,6 @@ struct Board {
         for (u32 n = 0; n < 3; ++n)
             if (at == timer_count[n].first) return count(n);
         if (at >> 8 == 0x0180D5 || at >> 8 == 0x0180D6) {
-            if ((at & 0x1C) == 0x10) return 0;
             if ((at & 0x1C) == 0x14) return registers.read(at, 4) | 0xA0;
         }
         if (at >= delay_port.first && at <= delay_port.last) return now < port_busy[at / 4 & 3] ? 0x80 : 0;
@@ -297,7 +294,7 @@ struct Board {
             if (value == 2) writing[port] = eeprom_ready + 5000 * 96;
         }
         if (word == pic_pending.first) pending = (pending & ~lanes) | levels();
-        if (word == blit_status.first) blit_flags &= ~(lanes & 0x0E);
+        if (word == blit_status.first) blit_flags &= ~lanes;
         if (word == lcd_status.first) {
             lcd_flags = lcd_bits() & ~(lanes & 5), lcd_cleared = now;
             if (lanes & 0xF0000) pending |= 1u << 12;
